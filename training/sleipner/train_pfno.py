@@ -3,7 +3,7 @@
 #  Licensed under the MIT License (MIT). See LICENSE in the repo root for license information.
 #  ------------------------------------------------------------------------------------------
 
-import sys 
+import sys
 sys.path.append('..')
 from distdl.backend import BackendProtocol, FrontEndProtocol, ModelProtocol, init_distdl
 from pfno import ParallelFNO4d, DistributedRelativeLpLoss
@@ -89,10 +89,7 @@ pfno = ParallelFNO4d(
 
 # Training
 out_dir = os.environ['MODEL_DIR']
-parameters = [p for p in pfno.parameters()]
-
-# Optimizer
-if len(parameters) > 0:
+if parameters := list(pfno.parameters()):
     optimizer = torch.optim.Adam(parameters, lr=1e-3)
 else:
     optimizer = None
@@ -111,7 +108,7 @@ if start_epoch > 0:
 
     # Load loss
     if P_root.active:
-        lossname = 'loss_epoch_' + str(epoch) + '.h5'
+        lossname = f'loss_epoch_{str(epoch)}.h5'
         fid = h5py.File(os.path.join(out_dir, lossname), 'r')
         train_accs = list(fid['train_loss'])
         valid_accs = list(fid['valid_loss'])
@@ -138,14 +135,13 @@ for i in range(epoch+1, num_epochs):
     n_train_batch = 0
     t0 = time.time()
 
-    for j, (x, y) in enumerate(train_loader):
-        
+    for x, y in train_loader:
         x = x.to(P_x.device)
         y = y.to(P_x.device)
 
         if optimizer is not None:
             optimizer.zero_grad()
-            
+
         y_hat = pfno(x)
         loss = criterion(y_hat, y)
 
@@ -159,15 +155,15 @@ for i in range(epoch+1, num_epochs):
 
     if P_root.active:
         train_accs.append(train_loss/n_train_batch)
-    
+
     P_x._comm.Barrier()
-    
+
     # Loop over validation data
     pfno.eval()
     valid_loss = 0
     n_valid_batch = 0
 
-    for j, (x, y) in enumerate(valid_loader):
+    for x, y in valid_loader:
         with torch.no_grad():
             x = x.to(P_x.device)
             y = y.to(P_x.device)
@@ -187,7 +183,7 @@ for i in range(epoch+1, num_epochs):
 
         # Save loss
         if P_root.active:
-            lossname = 'loss_epoch_' + str(i) + '.h5'
+            lossname = f'loss_epoch_{str(i)}.h5'
             fid = h5py.File(os.path.join(out_dir, lossname), 'w')
             fid.create_dataset('train_loss', data=train_accs)
             fid.create_dataset('valid_loss', data=valid_accs)

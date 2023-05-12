@@ -40,12 +40,12 @@ class SleipnerSerial(Dataset):
             target = 0
         self.target = target
         if savepath is not None:
-            self.cache = list()
+            self.cache = []
             # Check if files were already downloaded
             files = os.listdir(savepath)
             for i in samples:
-                if filename + '_' + str(int(i.item())) + '.h5' in files:
-                    self.cache.append(self.filename + '_' + str(i.item()) + '.h5')
+                if f'{filename}_{int(i.item())}.h5' in files:
+                    self.cache.append(f'{self.filename}_{str(i.item())}.h5')
         else:
             self.cache = None
 
@@ -61,8 +61,8 @@ class SleipnerSerial(Dataset):
         i = int(self.samples[index])
 
         # If caching is used, check if data sample exists locally
-        if self.cache is not None and self.filename + '_' + str(i) + '.h5' in self.cache:
-            fid = h5py.File(os.path.join(self.savepath, self.filename + '_' + str(i) + '.h5'), 'r')
+        if self.cache is not None and f'{self.filename}_{i}.h5' in self.cache:
+            fid = h5py.File(os.path.join(self.savepath, f'{self.filename}_{i}.h5'), 'r')
             x = torch.tensor(np.array(fid['x']))
             y = torch.tensor(np.array(fid['y']))
             nt = y.shape[-1]
@@ -76,9 +76,18 @@ class SleipnerSerial(Dataset):
             depth = torch.tensor(np.array(zarr.core.Array(self.store, path='depth')), dtype=torch.float32)
 
             # Dynamic parameters (Z Y X T)
-            wellmap = torch.tensor(np.array(zarr.core.Array(self.store, path='well_' + str(i))), dtype=torch.float32)
-            pressure = torch.tensor(np.array(zarr.core.Array(self.store, path='pressure_' + str(i))), dtype=torch.float32)
-            saturation = torch.tensor(np.array(zarr.core.Array(self.store, path='saturation_' + str(i))), dtype=torch.float32)
+            wellmap = torch.tensor(
+                np.array(zarr.core.Array(self.store, path=f'well_{i}')),
+                dtype=torch.float32,
+            )
+            pressure = torch.tensor(
+                np.array(zarr.core.Array(self.store, path=f'pressure_{i}')),
+                dtype=torch.float32,
+            )
+            saturation = torch.tensor(
+                np.array(zarr.core.Array(self.store, path=f'saturation_{i}')),
+                dtype=torch.float32,
+            )
             nx, ny, nz, nt = saturation.shape
 
             # Normalize
@@ -105,7 +114,7 @@ class SleipnerSerial(Dataset):
                 ),
                 axis=0
             )
-            
+
             y = torch.cat((
                 pressure,
                 saturation
@@ -114,11 +123,11 @@ class SleipnerSerial(Dataset):
             )
 
             if self.cache is not None:
-                fid = h5py.File(os.path.join(self.savepath, self.filename + '_' + str(i) + '.h5'), 'w')
+                fid = h5py.File(os.path.join(self.savepath, f'{self.filename}_{i}.h5'), 'w')
                 fid.create_dataset('x', data=x)
                 fid.create_dataset('y', data=y)
                 fid.close()
-                self.cache.append(self.filename + '_' + str(i) + '.h5')
+                self.cache.append(f'{self.filename}_{i}.h5')
 
         return x.repeat(1, 1, 1, 1, nt), y[self.target:self.target+1,:,:,:,:]
         
@@ -127,7 +136,7 @@ class SleipnerSerial(Dataset):
         if self.keep_data is False and self.cache is not None:
             print('Delete temp files.')
             for file in self.cache:
-                os.system('rm ' + self.savepath + '/' + file)
+                os.system(f'rm {self.savepath}/{file}')
 
 
 ###################################################################################################
@@ -157,7 +166,7 @@ class SleipnerParallel(Dataset):
             target = 0
         self.target = target
         if savepath is not None:
-            self.cache = list()
+            self.cache = []
 
             # Check if files were already downloaded
             files = os.listdir(savepath)
@@ -167,7 +176,7 @@ class SleipnerParallel(Dataset):
                     self.cache.append(filename_curr)
         else:
             self.cache = None
-        
+
         # Open the data file
         self.store = zarr.ABSStore(container=self.container, prefix=self.prefix, client=self.client)       
 
@@ -178,7 +187,7 @@ class SleipnerParallel(Dataset):
 
         # Read 
         i = int(self.samples[index])
-        
+
         # If caching is used, check if data sample exists locally
         filename = f'{self.filename}_{i:04d}_{self.P_feat.rank:04d}.h5'
         if self.cache is not None and filename in self.cache:
@@ -195,10 +204,31 @@ class SleipnerParallel(Dataset):
             permz = torch.tensor(np.array(zarr.core.Array(self.store, path='permz')[1:,self.yStart:self.yEnd,:]), dtype=torch.float32)
             depth = torch.tensor(np.array(zarr.core.Array(self.store, path='depth')[1:,self.yStart:self.yEnd,:]), dtype=torch.float32)
 
-            wellmap = torch.tensor(np.array(zarr.core.Array(self.store, path='well_' + str(i))[self.yStart:self.yEnd,:]), dtype=torch.float32)
-            pressure = torch.tensor(np.array(zarr.core.Array(self.store, path='pressure_' + str(i))[1:,self.yStart:self.yEnd,:,:]), dtype=torch.float32)
-            saturation = torch.tensor(np.array(zarr.core.Array(self.store, path='saturation_' + str(i))[1:,self.yStart:self.yEnd,:,:]), dtype=torch.float32)
-                    
+            wellmap = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'well_{i}')[
+                        self.yStart : self.yEnd, :
+                    ]
+                ),
+                dtype=torch.float32,
+            )
+            pressure = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'pressure_{i}')[
+                        1:, self.yStart : self.yEnd, :, :
+                    ]
+                ),
+                dtype=torch.float32,
+            )
+            saturation = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'saturation_{i}')[
+                        1:, self.yStart : self.yEnd, :, :
+                    ]
+                ),
+                dtype=torch.float32,
+            )
+
             # Normalize between 0 and 1
             saturation[saturation < 0] = 0
             if self.normalize:
@@ -206,7 +236,7 @@ class SleipnerParallel(Dataset):
                 permx -= 1.2000e-05; permx /= 43.5386
                 permz -= 1.2000e-5; permz /= 2495.3101
                 depth -= 728.0043; depth /= 363.9501
-            
+
             # Reshape to [ C X Y Z T]
             nx, ny, nz, nt = saturation.shape
             permx = permx.view(1, nx, ny, nz, 1)
@@ -224,7 +254,7 @@ class SleipnerParallel(Dataset):
                 ),
                 axis=0
             )
-            
+
             y = torch.cat((
                 pressure,
                 saturation
@@ -247,4 +277,4 @@ class SleipnerParallel(Dataset):
         if self.keep_data is False and self.cache is not None:
             print('Delete temp files.')
             for file in self.cache:
-                os.system('rm ' + self.savepath + '/' + file)
+                os.system(f'rm {self.savepath}/{file}')

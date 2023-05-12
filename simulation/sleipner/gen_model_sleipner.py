@@ -28,25 +28,26 @@ def gen_sample():
     wellmap = np.zeros((126, 72))
     wellx = []
     welly = []
-    welltxt = open('WELSPECS.txt', 'w')
-    welltxt.write('WELSPECS\n')
-    comptxt = open('COMPDAT.txt', 'w')
-    comptxt.write('COMPDAT\n')
-    wcontxt = open('WCONINJE.txt', 'w')
-    wcontxt.write('WCONINJE\n')
-    iz = 214
-    nperf = 8
+    with open('WELSPECS.txt', 'w') as welltxt:
+        welltxt.write('WELSPECS\n')
+        comptxt = open('COMPDAT.txt', 'w')
+        comptxt.write('COMPDAT\n')
+        wcontxt = open('WCONINJE.txt', 'w')
+        wcontxt.write('WCONINJE\n')
+        iz = 214
+        nperf = 8
 
-    for i in range(nwell):
-        wellmap, ix, iy = draw_well_loc(wellmap)
-        wellx.append(ix)
-        welly.append(iy)
-        name = 'Inj' + str(i)
-        welltxt.write('{} I {} {} 1000 GAS /\n'.format(name, ix, iy))
-        comptxt.write('{} {} {} {} {} OPEN -1 8.5e+02 2.0e-01 -1.0 0 1* Y -1.0 /\n'.format(name, ix, iy, iz, iz+nperf))
-        wcontxt.write('{} GAS OPEN RATE {} 3* 0 /\n'.format(name, 1e6/nwell))
+        for i in range(nwell):
+            wellmap, ix, iy = draw_well_loc(wellmap)
+            wellx.append(ix)
+            welly.append(iy)
+            name = f'Inj{str(i)}'
+            welltxt.write(f'{name} I {ix} {iy} 1000 GAS /\n')
+            comptxt.write(
+                f'{name} {ix} {iy} {iz} {iz + nperf} OPEN -1 8.5e+02 2.0e-01 -1.0 0 1* Y -1.0 /\n'
+            )
+            wcontxt.write(f'{name} GAS OPEN RATE {1000000.0 / nwell} 3* 0 /\n')
 
-    welltxt.close()
     comptxt.close()
     wcontxt.close()
 
@@ -103,25 +104,26 @@ def gen_model():
     poro = poro.transpose(2,1,0)
 
     # FIPNUM
-    fip = []
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 10) + '*1')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 21) + '*2')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 16) + '*3')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 16) + '*4')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*5')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 16) + '*6')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*7')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 17) + '*8')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*9')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 15) + '*10')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*11')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 23) + '*12')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*13')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 15) + '*14')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*15')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 35) + '*16')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 3) + '*17')
-    fip.append(str((nx + 2*nbpml) * (ny + 2*nbpml) * 58) + '*18')
+    fip = [
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 10)}*1',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 21)}*2',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 16)}*3',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 16)}*4',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*5',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 16)}*6',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*7',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 17)}*8',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*9',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 15)}*10',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*11',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 23)}*12',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*13',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 15)}*14',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*15',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 35)}*16',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 3)}*17',
+        f'{str((nx + 2 * nbpml) * (ny + 2 * nbpml) * 58)}*18',
+    ]
     fip = np.array(fip)
 
     # Save

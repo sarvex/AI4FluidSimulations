@@ -3,7 +3,7 @@
 #  Licensed under the MIT License (MIT). See LICENSE in the repo root for license information.
 #  ------------------------------------------------------------------------------------------
 
-from distdl.backend import BackendProtocol, FrontEndProtocol, ModelProtocol, init_distdl 
+from distdl.backend import BackendProtocol, FrontEndProtocol, ModelProtocol, init_distdl
 from distdl.backends.common.partition import MPIPartition
 from pfno import ParallelFNO4d, DistributedRelativeLpLoss
 from distdl.utilities.torch import zero_volume_tensor
@@ -56,11 +56,7 @@ pfno = ParallelFNO4d(
     num_k
 )
 
-# Training
-parameters = [p for p in pfno.parameters()]
-
-# Optimizer
-if len(parameters) > 0:
+if parameters := list(pfno.parameters()):
     optimizer = torch.optim.Adam(parameters, lr=1e-3)
 else:
     optimizer = None
@@ -83,14 +79,14 @@ if P_root.active:
 else:
     x = zero_volume_tensor(device=P_data.device)
     y = zero_volume_tensor(device=P_data.device)
-print("Before scattering -> x.shape: {}; x.device: {}".format(y.shape, y.device))   # data shape is [0] on all workers except on GPU0
+print(f"Before scattering -> x.shape: {y.shape}; x.device: {y.device}")
 
 # Distribute data on P_data partition, i.e. split data along the y dimension
 scatter_input = Repartition(P_root, P_data, preserve_batch=True)
 scatter_output = Repartition(P_root, P_data, preserve_batch=True)
 x = scatter_input(x)
 y = scatter_output(y)
-print("After scattering -> x.shape: {}; x.device: {}".format(y.shape, y.device))    # data is equally distributed among workers
+print(f"After scattering -> x.shape: {y.shape}; x.device: {y.device}")
 
 if optimizer is not None:
     optimizer.zero_grad()
@@ -108,6 +104,6 @@ if optimizer is not None:
 
 # Collect output tensor on one GPU (e.g. to save it)
 collect_output = Repartition(P_data, P_root, preserve_batch=False)
-print("Before collection -> y_.shape: {}; y_.device: {}".format(y_.shape, y_.device))
+print(f"Before collection -> y_.shape: {y_.shape}; y_.device: {y_.device}")
 y_ = collect_output(y_)
-print("After collection -> y_.shape: {}; y_.device: {}".format(y_.shape, y_.device))
+print(f"After collection -> y_.shape: {y_.shape}; y_.device: {y_.device}")

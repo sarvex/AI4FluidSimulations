@@ -35,9 +35,9 @@ class WaterlilySerial(Dataset):
         self.keep_data = keep_data
         self.filename = filename
         self.clip = clip
-        
+
         if savepath is not None:
-            self.cache = list()
+            self.cache = []
 
             # Check if files were already downloaded
             files = os.listdir(savepath)
@@ -47,7 +47,7 @@ class WaterlilySerial(Dataset):
                     self.cache.append(filename_curr)
         else:
             self.cache = None
-        
+
         # Open the data file
         self.store = zarr.ABSStore(container=self.container, prefix=self.prefix, client=self.client)       
 
@@ -70,8 +70,18 @@ class WaterlilySerial(Dataset):
 
         else:
 
-            x = torch.tensor(np.array(zarr.core.Array(self.store, path='model_' + str(i))[:,:,:,:3]), dtype=torch.float32)
-            vorticity = torch.tensor(np.array(zarr.core.Array(self.store, path='vorticity_' + str(i))[:,:,:,1:]), dtype=torch.float32)
+            x = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'model_{i}')[:, :, :, :3]
+                ),
+                dtype=torch.float32,
+            )
+            vorticity = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'vorticity_{i}')[:, :, :, 1:]
+                ),
+                dtype=torch.float32,
+            )
             nc_in = x.shape[-1]
 
             # Normalize
@@ -90,7 +100,7 @@ class WaterlilySerial(Dataset):
 
             # Reshape to [ C X Y Z T]
             nx, ny, nz, nt = self.shape
-            x = x.permute(3, 0, 1, 2).view(nc_in, nx, ny, nz, 1)   
+            x = x.permute(3, 0, 1, 2).view(nc_in, nx, ny, nz, 1)
             vorticity = vorticity.view(1, nx, ny, nz, nt)
             y = vorticity
 
@@ -130,9 +140,9 @@ class WaterlilyParallel(Dataset):
         self.clip = clip
         self.yStart = slicing.compute_start_index(P_feat.shape[2:], P_feat.index[2:], self.shape)[1]
         self.yEnd = slicing.compute_stop_index(P_feat.shape[2:], P_feat.index[2:], self.shape)[1]
-        
+
         if savepath is not None:
-            self.cache = list()
+            self.cache = []
 
             # Check if files were already downloaded
             files = os.listdir(savepath)
@@ -142,7 +152,7 @@ class WaterlilyParallel(Dataset):
                     self.cache.append(filename_curr)
         else:
             self.cache = None
-        
+
         # Open the data file
         self.store = zarr.ABSStore(container=self.container, prefix=self.prefix, client=self.client)       
 
@@ -166,8 +176,22 @@ class WaterlilyParallel(Dataset):
 
         else:
 
-            x = torch.tensor(np.array(zarr.core.Array(self.store, path='model_' + str(i))[:,self.yStart:self.yEnd,:,:3]), dtype=torch.float32)
-            vorticity = torch.tensor(np.array(zarr.core.Array(self.store, path='vorticity_' + str(i))[:,self.yStart:self.yEnd,:,1:]), dtype=torch.float32)
+            x = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'model_{i}')[
+                        :, self.yStart : self.yEnd, :, :3
+                    ]
+                ),
+                dtype=torch.float32,
+            )
+            vorticity = torch.tensor(
+                np.array(
+                    zarr.core.Array(self.store, path=f'vorticity_{i}')[
+                        :, self.yStart : self.yEnd, :, 1:
+                    ]
+                ),
+                dtype=torch.float32,
+            )
             nx, ny, nz, nc_in = x.shape
             nt = vorticity.shape[-1]
 
@@ -180,7 +204,7 @@ class WaterlilyParallel(Dataset):
                     vorticity = vorticity / self.clip
 
             # Reshape to [ C X Y Z T]
-            x = x.permute(3, 0, 1, 2).view(nc_in, nx, ny, nz, 1)   
+            x = x.permute(3, 0, 1, 2).view(nc_in, nx, ny, nz, 1)
             vorticity = vorticity.view(1, nx, ny, nz, nt)
             y = vorticity
 
